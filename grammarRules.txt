@@ -1,0 +1,5 @@
+GrammarID: A
+Rules:
+A -> aB
+B -> bC
+C -> c
