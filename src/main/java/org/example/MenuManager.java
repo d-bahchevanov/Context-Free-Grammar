@@ -8,6 +8,7 @@ public class MenuManager {
     private TextEditor editor;
     private BufferedReader inputReader;
 
+
     public MenuManager(TextEditor editor) {
         this.editor = editor;
         this.inputReader = new BufferedReader(new InputStreamReader(System.in));
@@ -25,7 +26,7 @@ public class MenuManager {
         }
     }
 
-    private void processCommand(String[] command) {
+    private void processCommand(String[] command) throws IOException {
         switch (command[0]) {
             case "open":
                 if (command.length != 2) {
@@ -42,14 +43,13 @@ public class MenuManager {
                 break;
             case "addRule":
                 if (command.length != 3) {
-                    System.out.println("Usage: addRule <variable> <terminals>");
+                    System.out.println("Usage: addRule <grammarId> <variable>-><terminals>");
                     break;
                 }
-                    String variable = command[1];
-                    String terminals = command[2];
-                    editor.addRule(variable,terminals);
-                    System.out.println("Rule added: ");
-                    break;
+                String variable = command[1];
+                String terminals = command[2];
+                editor.addRule(variable, terminals);
+                break;
 
             case "list":
 
