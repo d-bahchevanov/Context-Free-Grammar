@@ -1,20 +1,20 @@
 package org.example;
-
-import java.io.IOException;
+import java.util.List;
+import java.util.Map;
 
 public interface Operations {
     void list();
-    void print();
-    void save();
+    void print(String id);
+    void save(String id, String filename);
     void addRule(String grammarId, String ruleString);
-    void removeRule();
-    void union();
-    void concat();
-    void chomsky();
-    void cyk();
-    void iter();
-    void empty();
-    void chomskify();
+    void removeRule(String id, int n);
+    void union(String id1, String id2);
+    void concat(String id1, String id2);
+    void chomsky(String id);
+    void cyk(String id);
+    void iter(String id);
+    void empty(String id);
+    void chomskify(String id);
     void open(String filePath);
     void close();
     void saveAs(String filePath);

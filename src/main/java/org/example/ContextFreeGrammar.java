@@ -8,7 +8,6 @@ import java.util.Map;
 public class ContextFreeGrammar {
     private String id;
     private Map<String, List<Rule>> rules;
-    //private List<Rule> rules;
 
     public Map<String, List<Rule>> getRules() {
         return rules;
@@ -16,7 +15,6 @@ public class ContextFreeGrammar {
 
     public ContextFreeGrammar(String id) {
         this.id = id;
-        //this.rules = new ArrayList<>();
         this.rules = new HashMap<>();
     }
 
@@ -24,7 +22,6 @@ public class ContextFreeGrammar {
         return id;
     }
     public void addRule(String grammarId, List<Rule> rule) {
-        //rules.add(rule);
         rules.put(grammarId, rule);
     }
 }

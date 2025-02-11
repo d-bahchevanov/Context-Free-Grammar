@@ -1,9 +1,10 @@
 package org.example;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Rule {
+public class Rule implements Serializable {
     private String variable;
     private String terminals;
     public Rule(String variable, String terminals) {
