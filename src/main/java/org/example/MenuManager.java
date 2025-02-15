@@ -44,14 +44,18 @@ public class MenuManager {
                 editor.close();
                 break;
             case "save":
-                if (command.length != 3) {
-                    System.out.println("Usage: save <id> <filename>");
+                if (command.length == 1) {
+                    editor.save();
+                    break;
+                } else if (command.length == 3) {
+                    String idToSave = command[1];
+                    String filename = command[2];
+                    editor.save(idToSave, filename);
+                    break;
+                } else {
+                    System.out.println("Usages: save <id> <filename> or save");
                     break;
                 }
-                String idToSave = command[1];
-                String filename = command[2];
-                editor.save(idToSave, filename);
-                break;
             case "addRule":
                 if (command.length != 3) {
                     System.out.println("Usage: addRule <grammarId> <variable>-><terminals>");
@@ -100,6 +104,14 @@ public class MenuManager {
                     break;
                 }
                 editor.saveAs(command[1]);
+                break;
+            case "union":
+                if (command.length != 3) {
+                    System.out.println("Usage: union <id1> <id2>");
+                }
+                String id1 = command[1];
+                String id2 = command[2];
+                editor.union(id1, id2);
                 break;
             case "help":
                 editor.help();

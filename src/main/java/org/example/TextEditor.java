@@ -28,7 +28,7 @@ public class TextEditor implements Operations {
                 System.out.println("File " + filePath + " created with empty content.");
                 return;
             }
-
+            this.currentFile = filePath;
             grammarList.clear();
             grammarRules.clear();
 
@@ -81,28 +81,56 @@ public class TextEditor implements Operations {
             return;
         }
         for (ContextFreeGrammar grammar : grammarList) {
-            idList.addAll(grammar.getRules().keySet());
+            idList.add(grammar.getId());
+        }
+        System.out.println("All the grammar IDs: ");
+        for (String id:idList) {
+            System.out.println(id);
         }
     }
 
     @Override
     public void print(String id) {
-            for (ContextFreeGrammar grammar : grammarList) {
-                if (grammar.getId().equals(id)) {
-                    System.out.println("GrammarID: " + grammar.getId());
-                    System.out.println("Rules:");
-                    Map<String, List<Rule>> rules = grammar.getRules();
-                    for (Map.Entry<String, List<Rule>> entry : rules.entrySet()) {
-                        List<Rule> ruleList = entry.getValue();
-                        for (Rule rule : ruleList) {
-                            System.out.println(rule.getVariable() + " -> " + rule.getTerminals());
-                        }
-                    }
-                    return;
-                }
-            }
-            System.out.println("Grammar with ID " + id + " not found.");
+        if (!grammarRules.containsKey(id)) {
+            System.out.println("Error: Grammar ID not found.");
+            return;
+        }
+        List<Rule> rules = grammarRules.get(id);
+        System.out.println("GrammarID: " + id);
+        System.out.println("Rules:");
+        if (rules == null || rules.isEmpty()) {
+            System.out.println("No rules found for this grammar.");
+            return;
+        }
+        for (Rule rule : rules) {
+            System.out.println(rule);
+        }
     }
+    @Override
+    public void save() {
+        if (currentFile == null) {
+            System.out.println("Error: No file is currently opened. Use 'saveAs' to specify a file.");
+            return;
+        }
+
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(currentFile, false))) {
+            for (String grammarId : grammarRules.keySet()) {
+                writer.write("GrammarID: " + grammarId);
+                writer.newLine();
+                writer.write("Rules:");
+                writer.newLine();
+                for (Rule rule : grammarRules.get(grammarId)) {
+                    writer.write(rule.toString());
+                    writer.newLine();
+                }
+                writer.newLine();
+            }
+            System.out.println("File saved successfully: " + currentFile);
+        } catch (IOException e) {
+            System.out.println("Error saving file: " + e.getMessage());
+        }
+    }
+
     @Override
     public void save(String id, String filename) {
         if (currentGrammar == null) {
@@ -121,11 +149,11 @@ public class TextEditor implements Operations {
             }
 
     @Override
-    public void saveAs(String filePath) {
-        GrammarSerializer.serializeGrammar(currentGrammar.getRules(), filePath);
-        currentFile = filePath;
-        System.out.println("Successfully saved as " + filePath);
+    public void saveAs(String fileName) {
+        this.currentFile = fileName;  // Запазваме новото име на файла
+        save();
     }
+
     @Override
     public void addRule(String grammarId, String ruleString) {
         if (currentGrammar == null || !currentGrammar.getId().equals(grammarId)) {
@@ -163,55 +191,56 @@ public class TextEditor implements Operations {
             System.out.println("New grammar created with rule " + grammarId + ": " + ruleString);
         }
     }
-   /* @Override
+    @Override
     public void removeRule(String grammarId, int ruleIndex) {
-        try {
-            if (!currentGrammar.getRules().containsKey(grammarId)) {
-                System.out.println("Error: Grammar with ID " + grammarId + " does not exist.");
-                return;
-            }
-            List<Rule> rules = currentGrammar.getRules().get(grammarId);
-            if (ruleIndex < 0 || ruleIndex >= rules.size()) {
-                throw new IndexOutOfBoundsException("Rule index is out of bounds.");
-            }
-            rules.remove(ruleIndex);
-            currentGrammar.getRules().put(grammarId, rules);
-            System.out.println("Rule at index " + ruleIndex + " removed for GrammarID " + grammarId);
-        } catch (IndexOutOfBoundsException e) {
-            System.out.println("Error: " + e.getMessage());
-        } catch (Exception e) {
-            System.out.println("An error occurred: " + e.getMessage());
+        if (!grammarRules.containsKey(grammarId)) {
+            System.out.println("Error: Grammar with ID " + grammarId + " does not exist.");
+            return;
         }
-        System.out.println();
+        List<Rule> rules = grammarRules.get(grammarId);
+        if (rules == null || rules.isEmpty()) {
+            System.out.println("Error: No rules found for GrammarID " + grammarId);
+            return;
+        }
+        if (ruleIndex < 0 || ruleIndex >= rules.size()) {
+            System.out.println("Error: Rule index is out of bounds.");
+            return;
+        }
+        Rule removedRule = rules.remove(ruleIndex);
+        System.out.println("Removed rule: " + removedRule + " from GrammarID: " + grammarId);
+        if (rules.isEmpty()) {
+            grammarRules.remove(grammarId);
+        } else {
+            grammarRules.put(grammarId, rules);
+        }
+        save();
     }
-    */
-   @Override
-   public void removeRule(String grammarId, int ruleIndex) {
-       try {
-           for (ContextFreeGrammar grammar : grammarList) {
-               if (grammar.getId().equals(grammarId)) {
-                   List<Rule> rules = grammar.getRules().get(grammarId);
-                   if (ruleIndex < 0 || ruleIndex >= rules.size()) {
-                       throw new IndexOutOfBoundsException("Rule index is out of bounds.");
-                   }
-                   rules.remove(ruleIndex);
-                   grammarRules.put(grammarId, rules);
-                   System.out.println("Rule at index " + ruleIndex + " removed for GrammarID " + grammarId);
-               }
-           }
-           System.out.println("Error: Grammar with ID " + grammarId + " does not exist.");
-       } catch (IndexOutOfBoundsException e) {
-           System.out.println("Error: " + e.getMessage());
-       } catch (Exception e) {
-           System.out.println("An error occurred: " + e.getMessage());
-       }
-       System.out.println();
-   }
+
 
     @Override
     public void union(String id1, String id2) {
+        if (!grammarRules.containsKey(id1) || !grammarRules.containsKey(id2)) {
+            System.out.println("Error: One or both grammars do not exist.");
+            return;
+        }
+        String newGrammarId = id1 + "_" + id2;
+        if (grammarRules.containsKey(newGrammarId)) {
+            System.out.println("Error: Grammar with ID " + newGrammarId + " already exists.");
+            return;
+        }
+        List<Rule> rules1 = grammarRules.get(id1);
+        List<Rule> rules2 = grammarRules.get(id2);
 
+        List<Rule> mergedRules = new ArrayList<>();
+        mergedRules.addAll(rules1);
+        mergedRules.addAll(rules2);
+
+        ContextFreeGrammar newGrammar = new ContextFreeGrammar(newGrammarId);
+        grammarList.add(newGrammar);
+        grammarRules.put(newGrammarId, mergedRules);
+        System.out.println("New grammar created: " + newGrammarId);
     }
+
 
     @Override
     public void concat(String id1, String id2) {

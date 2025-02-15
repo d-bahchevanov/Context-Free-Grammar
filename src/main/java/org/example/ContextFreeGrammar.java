@@ -21,7 +21,7 @@ public class ContextFreeGrammar {
     public String getId() {
         return id;
     }
-    public void addRule(String grammarId, List<Rule> rule) {
+    /*public void addRule(String grammarId, List<Rule> rule) {
         rules.put(grammarId, rule);
-    }
+    }*/
 }

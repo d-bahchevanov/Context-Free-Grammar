@@ -5,6 +5,7 @@ import java.util.Map;
 public interface Operations {
     void list();
     void print(String id);
+    void save();
     void save(String id, String filename);
     void addRule(String grammarId, String ruleString);
     void removeRule(String id, int n);
