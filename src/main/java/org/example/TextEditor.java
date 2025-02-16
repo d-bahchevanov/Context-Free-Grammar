@@ -9,14 +9,41 @@ public class TextEditor implements Operations {
     private ContextFreeGrammar currentGrammar;
     private Map<String, List<Rule>> grammarRules;
     private List<ContextFreeGrammar> grammarList;
+
     public TextEditor() {
         this.currentFile = null;
         this.fileContent = new StringBuilder();
         this.grammarRules = new HashMap<>();
         this.grammarList = new ArrayList<>();
     }
+
+    private String generateNewVariable(Set<String> existingVariables) {
+        for (char c = 'A'; c <= 'Z'; c++) {
+            String candidate = String.valueOf(c);
+            if (!existingVariables.contains(candidate)) {
+                existingVariables.add(candidate);
+                return candidate;
+            }
+        }
+        throw new RuntimeException("No more available single-letter non-terminals!");
+    }
+
     public boolean hasGrammars() {
         return !grammarList.isEmpty();
+    }
+    private boolean grammarAlreadyExists(String grammarId) {
+        if (grammarRules.containsKey(grammarId)) {
+            System.out.println("Error: Grammar with ID " + grammarId + " already exists.");
+            return true;
+        }
+        return false;
+    }
+    private boolean invalidID(String id1, String id2) {
+        if (!grammarRules.containsKey(id1) || !grammarRules.containsKey(id2)) {
+            System.out.println("Error: One or both grammars do not exist.");
+            return true;
+        }
+        return false;
     }
 
     @Override
@@ -149,48 +176,51 @@ public class TextEditor implements Operations {
             }
 
     @Override
-    public void saveAs(String fileName) {
-        this.currentFile = fileName;  // Запазваме новото име на файла
+        public void saveAs(String filename) {
+        if (currentFile != null && !grammarRules.isEmpty()) {
+            save();
+        }
+        currentFile = filename;
+        System.out.println("Now saving to: " + filename);
         save();
     }
 
+
     @Override
     public void addRule(String grammarId, String ruleString) {
-        if (currentGrammar == null || !currentGrammar.getId().equals(grammarId)) {
-            currentGrammar = new ContextFreeGrammar(grammarId);
+        if (!grammarRules.containsKey(grammarId)) {
+            System.out.println("Error: Grammar with ID " + grammarId + " does not exist.");
+            return;
         }
-
         String[] parts = ruleString.split("->");
         if (parts.length != 2) {
             System.out.println("Invalid rule format: " + ruleString);
-            System.out.println("Please see the usage as example");
             return;
         }
-
-        String variable = parts[0].trim();
-        if (!variable.matches("[A-Z]+")) {
-            System.out.println("Please use upper case for variables!");
+        String left = parts[0].trim();
+        String right = parts[1].trim();
+        if (!left.matches("[A-Z]")) {
+            System.out.println("Error: Left side must be a single uppercase letter (non-terminal).");
             return;
         }
-        String terminals = parts[1].trim();
-        if (terminals.matches("[A-Z]+")) {
-            System.out.println("Please use lowercase or numbers for terminals!");
-            return;
-        }
-        Rule rule = new Rule(variable, terminals);
-        if (currentGrammar.getRules().containsKey(grammarId)) {
-            // Ако граматиката вече съществува, добавяме новото правило към вече съществуващия списък с правила
-            List<Rule> ruleList = currentGrammar.getRules().get(grammarId);
-            ruleList.add(rule);
-            System.out.println("Rule added to existing grammar " + grammarId + ": " + ruleString);
+        if (right.matches("[a-z0-9]")) {
+        } else if (right.matches("[A-Z]{1,2}")) {
+            for (char c : right.toCharArray()) {
+                if (!grammarRules.get(grammarId).stream().anyMatch(r -> r.getVariable().equals(String.valueOf(c)))) {
+                    System.out.println("Error: Both non-terminals must be defined in the grammar.");
+                    return;
+                }
+            }
         } else {
-            // Ако граматиката не съществува, създаваме нова граматика и добавяме новото правило към нея
-            List<Rule> ruleList = new ArrayList<>();
-            ruleList.add(rule);
-            currentGrammar.getRules().put(grammarId, ruleList);
-            System.out.println("New grammar created with rule " + grammarId + ": " + ruleString);
+            System.out.println("Error: Right side must be a single terminal or a combination of one or two non-terminals.");
+            return;
         }
+        Rule newRule = new Rule(left, right);
+        grammarRules.get(grammarId).add(newRule);
+        System.out.println("Rule added successfully to grammar " + grammarId + ": " + ruleString);
+        save();
     }
+
     @Override
     public void removeRule(String grammarId, int ruleIndex) {
         if (!grammarRules.containsKey(grammarId)) {
@@ -219,13 +249,11 @@ public class TextEditor implements Operations {
 
     @Override
     public void union(String id1, String id2) {
-        if (!grammarRules.containsKey(id1) || !grammarRules.containsKey(id2)) {
-            System.out.println("Error: One or both grammars do not exist.");
+        if (invalidID(id1,id2)) {
             return;
         }
         String newGrammarId = id1 + "_" + id2;
-        if (grammarRules.containsKey(newGrammarId)) {
-            System.out.println("Error: Grammar with ID " + newGrammarId + " already exists.");
+        if (grammarAlreadyExists(newGrammarId)) {
             return;
         }
         List<Rule> rules1 = grammarRules.get(id1);
@@ -239,23 +267,80 @@ public class TextEditor implements Operations {
         grammarList.add(newGrammar);
         grammarRules.put(newGrammarId, mergedRules);
         System.out.println("New grammar created: " + newGrammarId);
+        save();
     }
 
-
-    @Override
     public void concat(String id1, String id2) {
+        String newGrammarId = id1 + id2;
+        if (grammarAlreadyExists(newGrammarId)) {
+            return;
+        }
+        if (invalidID(id1,id2)) {
+            return;
+        }
+        List<Rule> rules1 = grammarRules.get(id1);
+        List<Rule> rules2 = grammarRules.get(id2);
 
+        if (rules1.isEmpty() || rules2.isEmpty()) {
+            System.out.println("Error: One of the grammars has no rules.");
+            return;
+        }
+
+        String newProduction = rules1.get(0).getTerminals() + rules2.get(0).getTerminals();
+        Rule newRule = new Rule(newGrammarId, newProduction);
+
+        List<Rule> newRules = new ArrayList<>();
+        newRules.add(newRule);
+        grammarRules.put(newGrammarId, newRules);
+        grammarList.add(new ContextFreeGrammar(newGrammarId));
+        System.out.println("Concatenation successful! New GrammarID: " + newGrammarId);
+        save();
     }
 
     @Override
-    public void chomsky(String id) {
-
+    public boolean chomsky(String grammarId) {
+        if (!grammarRules.containsKey(grammarId)) {
+            System.out.println("Error: Grammar with ID " + grammarId + " does not exist.");
+            return false;
+        }
+        List<Rule> rules = grammarRules.get(grammarId);
+        Set<String> definedNonTerminals = new HashSet<>();
+        for (Rule r : rules) {
+            definedNonTerminals.add(r.getVariable());
+        }
+        String startSymbol = rules.isEmpty() ? "S" : rules.get(0).getVariable();
+        for (Rule rule : rules) {
+            String left = rule.getVariable();
+            String right = rule.getTerminals();
+            if (!left.matches("[A-Z]")) {
+                System.out.println("Grammar " + grammarId + " is NOT in CNF. Left side must be single uppercase letter: " + left);
+                return false;
+            }
+            if (right.equals("ε")) {
+                if (!left.equals(startSymbol)) {
+                    System.out.println("Grammar " + grammarId + " is NOT in CNF. ε-production not on start symbol: " + rule);
+                    return false;
+                }
+            }
+            else if (right.matches("[a-z0-9]")) {
+            }
+            else if (right.matches("[A-Z]{2}")) {
+                String B = right.substring(0, 1);
+                String C = right.substring(1, 2);
+                if (!definedNonTerminals.contains(B) || !definedNonTerminals.contains(C)) {
+                    System.out.println("Grammar " + grammarId + " is NOT in CNF. Non-terminal(s) not defined: " + right);
+                    return false;
+                }
+            }
+            else {
+                System.out.println("Grammar " + grammarId + " is NOT in CNF. Invalid right side: " + right);
+                return false;
+            }
+        }
+        System.out.println("Grammar " + grammarId + " IS in Chomsky Normal Form.");
+        return true;
     }
 
-    @Override
-    public void cyk(String id) {
-
-    }
 
     @Override
     public void iter(String id) {
@@ -268,8 +353,71 @@ public class TextEditor implements Operations {
     }
 
     @Override
-    public void chomskify(String id) {
+    public void chomskify(String grammarId) {
+        if (!grammarRules.containsKey(grammarId)) {
+            System.out.println("Error: Grammar with ID " + grammarId + " does not exist.");
+            return;
+        }
 
+        List<Rule> originalRules = new ArrayList<>(grammarRules.get(grammarId));
+        List<Rule> newRules = new ArrayList<>();
+        Set<String> existingVariables = new HashSet<>();
+        Map<String, String> terminalToVariable = new HashMap<>();
+        for (Rule rule : originalRules) {
+            existingVariables.add(rule.getVariable());
+        }
+        for (Rule rule : originalRules) {
+            String left = rule.getVariable();
+            String right = rule.getTerminals();
+
+            if (right.length() == 2 && right.matches("[a-z0-9][A-Z]")) {
+                String terminal = right.substring(0, 1);
+                String nonTerminal = right.substring(1);
+
+                String newVar = terminalToVariable.computeIfAbsent(terminal, t -> {
+                    String var = generateNewVariable(existingVariables);
+                    newRules.add(new Rule(var, t));
+                    return var;
+                });
+
+                newRules.add(new Rule(left, newVar + nonTerminal));
+            } else {
+                newRules.add(rule);
+            }
+        }
+        List<Rule> cnfRules = new ArrayList<>();
+        for (Rule rule : newRules) {
+            String left = rule.getVariable();
+            String right = rule.getTerminals();
+
+            if (right.length() > 2 && right.matches("[A-Z]+")) {
+                List<String> symbols = new ArrayList<>();
+                for (char c : right.toCharArray()) {
+                    symbols.add(String.valueOf(c));
+                }
+
+                String first = symbols.remove(0);
+                String second = symbols.remove(0);
+                String newVar = generateNewVariable(existingVariables);
+
+                cnfRules.add(new Rule(left, first + newVar));
+
+                while (symbols.size() > 1) {
+                    String nextVar = generateNewVariable(existingVariables);
+                    cnfRules.add(new Rule(newVar, second + nextVar));
+                    newVar = nextVar;
+                    second = symbols.remove(0);
+                }
+
+                cnfRules.add(new Rule(newVar, second + symbols.get(0)));
+            } else {
+                cnfRules.add(rule);
+            }
+        }
+        String newGrammarId = grammarId + "_CNF";
+        grammarRules.put(newGrammarId, cnfRules);
+        System.out.println("New CNF grammar created: " + newGrammarId);
+        save();
     }
 
     @Override
@@ -282,6 +430,11 @@ public class TextEditor implements Operations {
         System.out.println("addRule <id> <rule>\tadd rules");
         System.out.println("removeRule <id> <n>\tremove rule per index");
         System.out.println("list\tmakes a list with every grammar ID");
+        System.out.println("print <id>\tprint by id");
+        System.out.println("union <id1> <id2>\tunite <id1> <id2>");
+        System.out.println("concat <id1> <id2>\tconcat <id1> <id2>");
+        System.out.println("chomsky <id>\tcheck if id is in proper chomsky form <file>");
+        System.out.println("chomskify <id>\tmake the grammar in proper chomsky form <file>");
         System.out.println("help\t\tprints this information");
         System.out.println("exit\t\texists the program");
     }

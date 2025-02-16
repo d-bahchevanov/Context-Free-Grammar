@@ -11,8 +11,8 @@ public interface Operations {
     void removeRule(String id, int n);
     void union(String id1, String id2);
     void concat(String id1, String id2);
-    void chomsky(String id);
-    void cyk(String id);
+    boolean chomsky(String id);
+    //boolean cyk(String id, String word);
     void iter(String id);
     void empty(String id);
     void chomskify(String id);

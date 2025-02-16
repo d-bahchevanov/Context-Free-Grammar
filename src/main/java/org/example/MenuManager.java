@@ -108,10 +108,45 @@ public class MenuManager {
             case "union":
                 if (command.length != 3) {
                     System.out.println("Usage: union <id1> <id2>");
+                    break;
                 }
                 String id1 = command[1];
                 String id2 = command[2];
                 editor.union(id1, id2);
+                break;
+            case "concat":
+                if (command.length != 3) {
+                    System.out.println("Usage: concat <id1> <id2>");
+                    break;
+                }
+                String cid1 = command[1];
+                String cid2 = command[2];
+                editor.concat(cid1, cid2);
+                break;
+            case "chomsky":
+                if (command.length != 2) {
+                    System.out.println("Usage: chomsky <id>");
+                    break;
+                }
+                String chomskyId = command[1];
+                editor.chomsky(chomskyId);
+                break;
+            /*case "cyk":
+                if (command.length != 3) {
+                    System.out.println("Usage: cyk <id> <word>");
+                    break;
+                }
+                String cykId = command[1];
+                String word = command[2];
+                editor.cyk(cykId, word);
+                break;*/
+            case "chomskify":
+                if (command.length != 2) {
+                    System.out.println("Usage: chomskify <id>");
+                    break;
+                }
+                String chomskifyId = command[1];
+                editor.chomskify(chomskifyId);
                 break;
             case "help":
                 editor.help();
