@@ -12,7 +12,7 @@ import static javax.script.ScriptEngine.FILENAME;
 public class MenuManager {
     private TextEditor editor;
     private BufferedReader inputReader;
-    private ContextFreeGrammar currentGrammar;
+
 
     public MenuManager(TextEditor editor) {
         this.editor = editor;
@@ -131,15 +131,6 @@ public class MenuManager {
                 String chomskyId = command[1];
                 editor.chomsky(chomskyId);
                 break;
-            /*case "cyk":
-                if (command.length != 3) {
-                    System.out.println("Usage: cyk <id> <word>");
-                    break;
-                }
-                String cykId = command[1];
-                String word = command[2];
-                editor.cyk(cykId, word);
-                break;*/
             case "chomskify":
                 if (command.length != 2) {
                     System.out.println("Usage: chomskify <id>");
@@ -147,6 +138,22 @@ public class MenuManager {
                 }
                 String chomskifyId = command[1];
                 editor.chomskify(chomskifyId);
+                break;
+            case "iter":
+                if (command.length != 2) {
+                    System.out.println("Usage: iter <id>");
+                    break;
+                }
+                String iterId = command[1];
+                editor.iter(iterId);
+                break;
+            case "empty":
+                if (command.length != 2) {
+                    System.out.println("Usage: empty <id>");
+                    break;
+                }
+                String emptyId = command[1];
+                editor.empty(emptyId);
                 break;
             case "help":
                 editor.help();

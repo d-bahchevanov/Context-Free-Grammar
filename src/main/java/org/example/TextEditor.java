@@ -5,10 +5,10 @@ import java.util.*;
 
 public class TextEditor implements Operations {
     private String currentFile;
-    private StringBuilder fileContent;
+    private final StringBuilder fileContent;
     private ContextFreeGrammar currentGrammar;
-    private Map<String, List<Rule>> grammarRules;
-    private List<ContextFreeGrammar> grammarList;
+    private final Map<String, List<Rule>> grammarRules;
+    private final List<ContextFreeGrammar> grammarList;
 
     public TextEditor() {
         this.currentFile = null;
@@ -38,6 +38,14 @@ public class TextEditor implements Operations {
         }
         return false;
     }
+    private boolean grammarExists(String grammarId) {
+        if (!grammarRules.containsKey(grammarId)) {
+            System.out.println("Error: Grammar with ID " + grammarId + " does not exist.");
+            return false;
+        }
+        return true;
+    }
+
     private boolean invalidID(String id1, String id2) {
         if (!grammarRules.containsKey(id1) || !grammarRules.containsKey(id2)) {
             System.out.println("Error: One or both grammars do not exist.");
@@ -45,7 +53,6 @@ public class TextEditor implements Operations {
         }
         return false;
     }
-
     @Override
     public void open(String filePath) {
         try {
@@ -70,8 +77,6 @@ public class TextEditor implements Operations {
                     ContextFreeGrammar grammar = new ContextFreeGrammar(grammarId);
                     grammarList.add(grammar);
                     grammarRules.put(grammarId, new ArrayList<>());
-
-                    // Автоматично задаваме първата граматика като currentGrammar
                     if (currentGrammar == null) {
                         currentGrammar = grammar;
                     }
@@ -118,8 +123,7 @@ public class TextEditor implements Operations {
 
     @Override
     public void print(String id) {
-        if (!grammarRules.containsKey(id)) {
-            System.out.println("Error: Grammar ID not found.");
+        if (!grammarExists(id)) {
             return;
         }
         List<Rule> rules = grammarRules.get(id);
@@ -169,7 +173,6 @@ public class TextEditor implements Operations {
             System.out.println("Error: Grammar with ID " + id + " not found");
             return;
         }
-
                 grammarRules.put(id, currentGrammar.getRules().get(id));
                 GrammarSerializer.serializeGrammar(grammarRules, filename);
                 System.out.println("Successfully saved grammar with ID " + id + " to " + filename);
@@ -188,8 +191,7 @@ public class TextEditor implements Operations {
 
     @Override
     public void addRule(String grammarId, String ruleString) {
-        if (!grammarRules.containsKey(grammarId)) {
-            System.out.println("Error: Grammar with ID " + grammarId + " does not exist.");
+        if (!grammarExists(grammarId)) {
             return;
         }
         String[] parts = ruleString.split("->");
@@ -223,8 +225,7 @@ public class TextEditor implements Operations {
 
     @Override
     public void removeRule(String grammarId, int ruleIndex) {
-        if (!grammarRules.containsKey(grammarId)) {
-            System.out.println("Error: Grammar with ID " + grammarId + " does not exist.");
+        if (!grammarExists(grammarId)) {
             return;
         }
         List<Rule> rules = grammarRules.get(grammarId);
@@ -258,11 +259,9 @@ public class TextEditor implements Operations {
         }
         List<Rule> rules1 = grammarRules.get(id1);
         List<Rule> rules2 = grammarRules.get(id2);
-
         List<Rule> mergedRules = new ArrayList<>();
         mergedRules.addAll(rules1);
         mergedRules.addAll(rules2);
-
         ContextFreeGrammar newGrammar = new ContextFreeGrammar(newGrammarId);
         grammarList.add(newGrammar);
         grammarRules.put(newGrammarId, mergedRules);
@@ -299,8 +298,7 @@ public class TextEditor implements Operations {
 
     @Override
     public boolean chomsky(String grammarId) {
-        if (!grammarRules.containsKey(grammarId)) {
-            System.out.println("Error: Grammar with ID " + grammarId + " does not exist.");
+        if (!grammarExists(grammarId)) {
             return false;
         }
         List<Rule> rules = grammarRules.get(grammarId);
@@ -343,22 +341,72 @@ public class TextEditor implements Operations {
 
 
     @Override
-    public void iter(String id) {
+    public void iter(String grammarId) {
+        if (!grammarExists(grammarId)) {
+            return;
+        }
+        int count = 1;
+        String newGrammarId;
+        do {
+            newGrammarId = grammarId + "_ITER" + (count == 1 ? "" : count);
+            count++;
+        } while (grammarRules.containsKey(newGrammarId));
 
+        Set<String> existingVars = new HashSet<>();
+        for (String gId : grammarRules.keySet()) {
+            if (gId.startsWith(grammarId)) {
+                for (Rule r : grammarRules.get(gId)) {
+                    existingVars.add(r.getVariable());
+                }
+            }
+        }
+        String newStart = "S'";
+        while (existingVars.contains(newStart)) {
+            newStart += "'";
+        }
+        existingVars.add(newStart);
+        List<Rule> originalRules = grammarRules.get(grammarId);
+        List<Rule> newRules = new ArrayList<>(originalRules);
+        newRules.add(new Rule(newStart, "ε"));
+        newRules.add(new Rule(newStart, grammarId + newStart));
+        grammarRules.put(newGrammarId, newRules);
+        System.out.println("New grammar created: " + newGrammarId);
+        save();
     }
+
 
     @Override
-    public void empty(String id) {
-
+    public boolean empty(String grammarId) {
+        if (!grammarExists(grammarId)) {
+            return false;
+        }
+        Set<String> generating = new HashSet<>();
+        boolean changed;
+        do {
+            changed = false;
+            for (Rule rule : grammarRules.get(grammarId)) {
+                if (!generating.contains(rule.getVariable()) &&
+                        rule.getTerminals().chars().allMatch(c -> Character.isLowerCase(c) || generating.contains(String.valueOf((char) c)))) {
+                    generating.add(rule.getVariable());
+                    changed = true;
+                }
+            }
+        } while (changed);
+        boolean isEmpty = !generating.contains(grammarRules.get(grammarId).get(0).getVariable());
+        if (isEmpty) {
+            System.out.println("The grammar " + grammarId + " generates an empty language.");
+        } else {
+            System.out.println("The grammar " + grammarId + " does NOT generate an empty language.");
+        }
+        return isEmpty;
     }
+
 
     @Override
     public void chomskify(String grammarId) {
-        if (!grammarRules.containsKey(grammarId)) {
-            System.out.println("Error: Grammar with ID " + grammarId + " does not exist.");
+        if (!grammarExists(grammarId)) {
             return;
         }
-
         List<Rule> originalRules = new ArrayList<>(grammarRules.get(grammarId));
         List<Rule> newRules = new ArrayList<>();
         Set<String> existingVariables = new HashSet<>();
@@ -435,6 +483,8 @@ public class TextEditor implements Operations {
         System.out.println("concat <id1> <id2>\tconcat <id1> <id2>");
         System.out.println("chomsky <id>\tcheck if id is in proper chomsky form <file>");
         System.out.println("chomskify <id>\tmake the grammar in proper chomsky form <file>");
+        System.out.println("iter <id>\titer by id (Kleene star)");
+        System.out.println("empty <id>\tcheck if empty by id");
         System.out.println("help\t\tprints this information");
         System.out.println("exit\t\texists the program");
     }

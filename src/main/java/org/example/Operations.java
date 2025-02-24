@@ -12,9 +12,8 @@ public interface Operations {
     void union(String id1, String id2);
     void concat(String id1, String id2);
     boolean chomsky(String id);
-    //boolean cyk(String id, String word);
     void iter(String id);
-    void empty(String id);
+    boolean empty(String id);
     void chomskify(String id);
     void open(String filePath);
     void close();
